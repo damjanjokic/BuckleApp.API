@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="compose.yaml" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/BuckleApp.Api/BuckleApp.Api.csproj" />
+    <Project Path="src/BuckleApp.Application/BuckleApp.Application.csproj" />
+    <Project Path="src/BuckleApp.Core/BuckleApp.Core.csproj" />
+    <Project Path="src/BuckleApp.Data/BuckleApp.Data.csproj" />
+    <Project Path="src/BuckleApp.Infrastructure/BuckleApp.Infrastructure.csproj" />
+  </Folder>
+</Solution>
