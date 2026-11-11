@@ -1,5 +1,6 @@
 using BuckleApp.Infrastructure.Interfaces;
 using Microsoft.Extensions.Options;
+using Resend;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
@@ -14,17 +15,34 @@ public class EmailService : IEmailService
         _config = config.Value;
     }
     
+    // public async Task<bool> Send(string mailSubject, string mailBodyText, string mailTo)
+    // {
+    //     var client = new SendGridClient(_config.ApiKey);
+    //     var from = new EmailAddress(_config.SenderEmail, _config.SenderName);
+    //     var to = new EmailAddress(mailTo);
+    //     var subject = mailSubject;
+    //     var htmlContent = mailBodyText;
+    //     var msg = MailHelper.CreateSingleEmail(from, to, subject, null, htmlContent);
+    //     var response = await client.SendEmailAsync(msg);
+
+    //     return response.IsSuccessStatusCode;
+    // }
+
     public async Task<bool> Send(string mailSubject, string mailBodyText, string mailTo)
     {
-        var client = new SendGridClient(_config.ApiKey);
-        var from = new EmailAddress(_config.SenderEmail, _config.SenderName);
-        var to = new EmailAddress(mailTo);
-        var subject = mailSubject;
-        var htmlContent = mailBodyText;
-        var msg = MailHelper.CreateSingleEmail(from, to, subject, null, htmlContent);
-        var response = await client.SendEmailAsync(msg);
+        IResend resend = ResendClient.Create(_config.ApiKey);
 
-        return response.IsSuccessStatusCode;
+        var resp = await resend.EmailSendAsync( new EmailMessage()
+        {
+            From = _config.SenderEmail,
+            To = mailTo,
+            Subject = mailSubject,
+            HtmlBody = mailBodyText
+        } );
+        Console.WriteLine( "Email Id={0}", resp.Content );
+
+        return resp.Success;
+
     }
 
     // public Task Send(string from, string senderName, string subject, string bodyText, string to)
