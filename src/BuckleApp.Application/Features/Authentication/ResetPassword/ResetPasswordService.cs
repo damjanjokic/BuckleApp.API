@@ -20,14 +20,18 @@ public class ResetPasswordService : IResetPasswordService
         var user = await _authRepository.FindByEmailAsync(request.Email);
 
         if (user == null)
-            throw new RestException(HttpStatusCode.NotFound, "There is no user with this email address");
+            throw new RestException(HttpStatusCode.BadRequest, "Invalid credentials");
         
-        var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
+        if (user.isDeleted || user.IsDisabled || (await _authRepository.GetUserRoles(user)).Contains("Student"))
+            throw new RestException(HttpStatusCode.BadRequest, "Invalid credentials");
+        string decodedToken;
+        try { decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token)); }
+        catch (FormatException) { throw new RestException(HttpStatusCode.BadRequest, "Invalid credentials"); }
 
         var reset = await _authRepository.ResetPasswordAsync(user, decodedToken, request.Password);
         if (reset.Errors.Any())
         {
-            throw new RestException(HttpStatusCode.BadRequest, reset.Errors);
+            throw new RestException(HttpStatusCode.BadRequest, "Invalid credentials");
         }
 
         if (!user.EmailConfirmed)

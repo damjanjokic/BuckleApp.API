@@ -1,6 +1,8 @@
+using BuckleApp.Application.Dtos;
+
 namespace BuckleApp.Application.Features.Authentication.LoginUser;
 
 public interface ILoginUserService
 {
-    Task<string> ExecuteAsync(LoginUserRequest request);
+    Task<AuthenticationResponse> ExecuteAsync(LoginUserRequest request);
 }

@@ -1,54 +1,47 @@
-using System.Net;
-using BuckleApp.Application.Exceptions;
-using BuckleApp.Core.Enumerations;
+using BuckleApp.Application.Dtos;
+using BuckleApp.Application.Features.Authentication.Services;
+using BuckleApp.Application.Features.Authentication.VerifyStudentLoginCode;
 using BuckleApp.Core.IRepositories;
-using BuckleApp.Infrastructure.Interfaces;
-using Microsoft.AspNetCore.Identity;
 
 namespace BuckleApp.Application.Features.Authentication.LoginUser;
 
 public class LoginUserService : ILoginUserService
 {
     private readonly IAuthRepository _authRepository;
-    private readonly IJwtGenerator _jwtGenerator;
+    private readonly IVerifyStudentLoginCodeService _verifyStudentLoginCodeService;
+    private readonly IAuthenticationSessionService _authenticationSessionService;
 
-    public LoginUserService(IJwtGenerator jwtGenerator, IAuthRepository authRepository)
+    public LoginUserService(IAuthRepository authRepository,
+        IVerifyStudentLoginCodeService verifyStudentLoginCodeService,
+        IAuthenticationSessionService authenticationSessionService)
     {
-        _jwtGenerator = jwtGenerator;
         _authRepository = authRepository;
+        _verifyStudentLoginCodeService = verifyStudentLoginCodeService;
+        _authenticationSessionService = authenticationSessionService;
     }
-    
-    public async Task<string> ExecuteAsync(LoginUserRequest request)
+
+    public async Task<AuthenticationResponse> ExecuteAsync(LoginUserRequest request)
     {
-        var result = false;
-        var user = await _authRepository.FindByEmailAsync(request.Email);
+        var user = await _authRepository.FindByEmailAsync(request.Email.Trim());
+        if (user == null) throw AuthenticationRules.InvalidCredentials();
+        var roles = (await _authRepository.GetUserRoles(user)).ToList();
+        if (roles.Contains("Student"))
+            return await _verifyStudentLoginCodeService.ExecuteAsync(new VerifyStudentLoginCodeRequest
+            {
+                Email = user.Email!, Code = request.Password
+            });
 
-        if (user == null)
-            throw new RestException(HttpStatusCode.Unauthorized);
-
-        /*if (!user.EmailConfirmed)
-            throw new RestException(HttpStatusCode.BadRequest, new { Email = "Email is not confirmed" });*/
-        var roles = await _authRepository.GetUserRoles(user);
-        if (roles!.First() == Role.Student.ToString())
+        var response = await _authRepository.WithUserLockAsync<AuthenticationResponse?>(user.Id, async () =>
         {
-            var claims = await _authRepository.GetClaimsAsync(user);
-            var loginCodeClaim = claims.FirstOrDefault(c => c.Type == "OneTimeLoginCode");
-            if (loginCodeClaim == null || loginCodeClaim.Value != request.Password)
-                throw new RestException(HttpStatusCode.BadRequest, "Invalid or expired code");
-            await _authRepository.RemoveClaimAsync(user, loginCodeClaim);
-            result = true;
-        }
-        else
-        {
-            result = await _authRepository
-                .CheckPasswordSignInAsync(user, request.Password, false);
-        }
+            var current = await _authRepository.FindByIdAsync(user.Id);
 
-        if (result)
-        {
-            return _jwtGenerator.CreateToken(user, roles.ToList());
-        }
+            if (!await AuthenticationRules.IsEligibleSessionUserAsync(current, _authRepository) ||
+                (await _authRepository.GetUserRoles(current!)).Contains("Student")) return null;
+            if (!await _authRepository.CheckPasswordSignInAsync(current!, request.Password, true)) return null;
+            return await _authenticationSessionService.CreateAsync(
+                current!, Guid.NewGuid());
+        });
 
-        throw new RestException(HttpStatusCode.Unauthorized);
+        return response ?? throw AuthenticationRules.InvalidCredentials();
     }
 }

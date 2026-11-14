@@ -1,42 +1,24 @@
-using System.Text;
 using BuckleApp.API.Extensions;
 using BuckleApp.API.Middleware;
 using BuckleApp.Application.Mapping;
 using BuckleApp.Infrastructure.Email;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureRateLimiter();
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.ResolveDependenciesExtension();
 builder.ConfigureIdentity();
-builder.ConfigureIdentityToken();
+builder.ConfigureAuthenticationOptions();
 builder.ConfigureSqlContext();
 
 MapsterConfig.RegisterMappings();
 
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    }).AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII
-                .GetBytes(builder.Configuration.GetSection("Token").Value)),
-            ValidateIssuer = false,
-            ValidateAudience = false
-        };
-    });
+builder.ConfigureJwtAuthentication();
 builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>
@@ -86,6 +68,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
