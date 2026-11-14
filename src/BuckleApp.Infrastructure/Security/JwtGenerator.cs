@@ -16,7 +16,7 @@ public class JwtGenerator : IJwtGenerator
     {
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config.GetSection("Token").Value));
     }
-    public string CreateToken(User user, List<string> roles)
+    public string CreateToken(User user, List<string> roles, DateTime expiresAt)
     {
         var claims = new List<Claim>
         {
@@ -26,13 +26,12 @@ public class JwtGenerator : IJwtGenerator
         
         claims.AddRange(roles.Select(x => new Claim(ClaimsIdentity.DefaultRoleClaimType, x)));
         
-        // generate signing credentials
         var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha512Signature);
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddDays(365),
+            Expires = expiresAt,
             SigningCredentials = creds
         };
 

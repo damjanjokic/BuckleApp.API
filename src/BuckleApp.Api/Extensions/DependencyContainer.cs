@@ -1,4 +1,9 @@
-﻿using BuckleApp.API.Requests.Auth;
+using BuckleApp.Application.Features.Authentication.RequestStudentLoginCode;
+using BuckleApp.Application.Features.Authentication.VerifyStudentLoginCode;
+using BuckleApp.Application.Features.Authentication.RefreshSession;
+using BuckleApp.Application.Features.Authentication.LogoutUser;
+using BuckleApp.Application.Features.Authentication.Services;
+using BuckleApp.API.Requests.Auth;
 using BuckleApp.Application.Features.Appointments;
 using BuckleApp.Application.Features.Appointments.CancelAppointment;
 using BuckleApp.Application.Features.Appointments.CreateAppointment;
@@ -29,9 +34,9 @@ public static class DependencyContainer
 {
     public static void ResolveDependenciesExtension(this WebApplicationBuilder builder)
     {
+        builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<IJwtGenerator, JwtGenerator>();
         builder.Services.AddScoped<IAuthRepository, AuthRepository>();
-        builder.Services.AddScoped<IJwtHandler, JwtHandler>();
         builder.Services.AddScoped<IUserAccessor, UserAccessor>();
         builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IPasswordGenerator, PasswordGenerator>();
@@ -53,6 +58,14 @@ public static class DependencyContainer
         #endregion
 
         #region Auth
+
+        builder.Services.AddScoped<ILoginCodeHasher, LoginCodeHasher>();
+        builder.Services.AddScoped<IRequestStudentLoginCodeService, RequestStudentLoginCodeService>();
+        builder.Services.AddScoped<IVerifyStudentLoginCodeService, VerifyStudentLoginCodeService>();
+        builder.Services.AddScoped<IRefreshSessionService, RefreshSessionService>();
+        builder.Services.AddScoped<ILogoutUserService, LogoutUserService>();
+        builder.Services.AddScoped<IAuthenticationSessionService, AuthenticationSessionService>();
+
 
         builder.Services.AddScoped<IForgotPasswordService, ForgotPasswordService>();
         builder.Services.AddScoped<ILoginUserService, LoginUserService>();

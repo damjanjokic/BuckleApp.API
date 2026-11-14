@@ -12,10 +12,6 @@ public static class IdentityConfiguration
             .AddSignInManager<SignInManager<User>>()
             .AddDefaultTokenProviders();
 
-    public static void ConfigureIdentityToken(this WebApplicationBuilder builder) =>
-        builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
-            opt.TokenLifespan = TimeSpan.FromDays(365 * 10));
-
     // public static void ConfigureIdentityOps(this WebApplicationBuilder builder)
     // {
     //     var identity = builder.Services.AddIdentityCore<User>(opt =>

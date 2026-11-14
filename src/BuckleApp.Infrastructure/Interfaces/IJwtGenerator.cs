@@ -5,5 +5,5 @@ namespace BuckleApp.Infrastructure.Interfaces;
 
 public interface IJwtGenerator
 {
-    string CreateToken(User user, List<string> roles);
+    string CreateToken(User user, List<string> roles, DateTime expiresAt);
 }

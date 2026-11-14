@@ -9,6 +9,16 @@ namespace BuckleApp.Core.IRepositories;
 public interface IAuthRepository
 {
     Task<IdentityResult> CreateAsync(User user, string password);
+    Task<IdentityResult> CreateAsync(User user);
+    Task<IdentityResult> CreateWithRoleAsync(User user, string? password, Role role);
+    Task<T> WithUserLockAsync<T>(Guid userId, Func<Task<T>> operation);
+    Task<List<UserLoginCode>> GetLoginCodesAsync(Guid userId);
+    Task<RefreshToken?> FindRefreshTokenAsync(string hash);
+    Task<List<RefreshToken>> GetRefreshFamilyAsync(Guid userId, Guid familyId);
+    Task<User?> FindByIdAsync(Guid id);
+    Task<bool> OrganisationExistsAsync(Guid id);
+    void AddLoginCode(UserLoginCode code);
+    void AddRefreshToken(RefreshToken token);
     Task<bool> CheckPasswordSignInAsync(User User, string password, bool lockoutOnFailure);
     Task<User> FindByUsernameAsync(string username);
     Task<User> FindByEmailAsync(string username);

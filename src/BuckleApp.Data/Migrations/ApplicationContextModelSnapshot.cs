@@ -100,7 +100,9 @@ namespace BuckleApp.Data.Migrations
 
             modelBuilder.Entity("BuckleApp.Core.Entities.User", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<bool>("IsDisabled").HasColumnType("boolean");
+
+                b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
@@ -457,6 +459,45 @@ namespace BuckleApp.Data.Migrations
                 {
                     b.Navigation("UserAppointments");
                 });
+            modelBuilder.Entity("BuckleApp.Core.Entities.UserLoginCode", b =>
+            {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<Guid>("UserId").HasColumnType("uuid");
+                b.Property<string>("CodeHash").IsRequired().HasMaxLength(64).HasColumnType("character varying(64)");
+                b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTime>("ExpiresAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTime?>("ConsumedAt").HasColumnType("timestamp with time zone");
+                b.Property<int>("FailedAttempts").HasColumnType("integer");
+                b.HasKey("Id");
+                b.HasIndex("UserId", "CreatedAt");
+                b.HasIndex("UserId").IsUnique().HasFilter("\"ConsumedAt\" IS NULL");
+                b.ToTable("UserLoginCodes", t => t.HasCheckConstraint("CK_UserLoginCodes_Attempts", "\"FailedAttempts\" BETWEEN 0 AND 5"));
+            });
+            modelBuilder.Entity("BuckleApp.Core.Entities.UserLoginCode", b =>
+            {
+                b.HasOne("BuckleApp.Core.Entities.User", "User").WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade).IsRequired();
+                b.Navigation("User");
+            });
+            modelBuilder.Entity("BuckleApp.Core.Entities.RefreshToken", b =>
+            {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<Guid>("UserId").HasColumnType("uuid");
+                b.Property<Guid>("FamilyId").HasColumnType("uuid");
+                b.Property<string>("TokenHash").IsRequired().HasMaxLength(64).HasColumnType("character varying(64)");
+                b.Property<string>("SecurityStamp").IsRequired().HasColumnType("text");
+                b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTime>("ExpiresAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTime?>("RevokedAt").HasColumnType("timestamp with time zone");
+                b.HasKey("Id");
+                b.HasIndex("TokenHash").IsUnique();
+                b.HasIndex("UserId", "FamilyId");
+                b.ToTable("RefreshTokens");
+            });
+            modelBuilder.Entity("BuckleApp.Core.Entities.RefreshToken", b =>
+            {
+                b.HasOne("BuckleApp.Core.Entities.User", "User").WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade).IsRequired();
+                b.Navigation("User");
+            });
 #pragma warning restore 612, 618
         }
     }

@@ -20,9 +20,49 @@ public class AuthRepository : IAuthRepository
             _context = context;
         }
 
+        public async Task<IdentityResult> CreateWithRoleAsync(User user, string? password, Role role)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            var created = password == null ? await CreateAsync(user) : await CreateAsync(user, password);
+            if (!created.Succeeded) return created;
+            var assigned = await _userManager.AddToRoleAsync(user, role.ToString());
+            if (!assigned.Succeeded) return assigned;
+            await transaction.CommitAsync();
+            return assigned;
+        }
+
+        public Task<IdentityResult> CreateAsync(User user) => _userManager.CreateAsync(user);
+        public async Task<User?> FindByIdAsync(Guid id) => await _userManager.FindByIdAsync(id.ToString());
+        public Task<bool> OrganisationExistsAsync(Guid id) => _context.Organisations.AnyAsync(x => x.Id == id && !x.IsDeleted);
+        public Task<List<UserLoginCode>> GetLoginCodesAsync(Guid userId) => _context.UserLoginCodes.Where(x => x.UserId == userId).ToListAsync();
+        public Task<RefreshToken?> FindRefreshTokenAsync(string hash) => _context.RefreshTokens.SingleOrDefaultAsync(x => x.TokenHash == hash);
+        public Task<List<RefreshToken>> GetRefreshFamilyAsync(Guid userId, Guid familyId) => _context.RefreshTokens.Where(x => x.UserId == userId && x.FamilyId == familyId).ToListAsync();
+        public void AddLoginCode(UserLoginCode code) => _context.UserLoginCodes.Add(code);
+        public void AddRefreshToken(RefreshToken token) => _context.RefreshTokens.Add(token);
+
+        // Every code/session mutation locks the owning user, including across API instances.
+        public async Task<T> WithUserLockAsync<T>(Guid userId, Func<Task<T>> operation)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await _context.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM \"AspNetUsers\" WHERE \"Id\" = {userId} FOR UPDATE");
+            // A refresh token may have been read before waiting for the lock.
+            _context.ChangeTracker.Clear();
+            var result = await operation();
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return result;
+        }
+
         public async Task<bool> CheckPasswordSignInAsync(User user, string password, bool lockoutOnFailure)
         {
-            return await _userManager.CheckPasswordAsync(user, password);
+            if (await _userManager.IsLockedOutAsync(user)) return false;
+            if (!await _userManager.CheckPasswordAsync(user, password))
+            {
+                if (lockoutOnFailure) await _userManager.AccessFailedAsync(user);
+                return false;
+            }
+            await _userManager.ResetAccessFailedCountAsync(user);
+            return true;
         }
 
         public async Task<IdentityResult> ConfirmEmailAsync(User user, string decodedToken)
