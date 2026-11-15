@@ -499,3 +499,5 @@ $RECYCLE.BIN/
 
 # Local appsettings
 **/appsettings.Development.json
+# Local application logs
+**/logs/

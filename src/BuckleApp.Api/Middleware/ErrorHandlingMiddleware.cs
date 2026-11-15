@@ -33,13 +33,16 @@ public class ErrorHandlingMiddleware
         switch (ex)
         {
             case RestException re:
-                logger.LogError(ex, "REST ERROR");
+                if ((int)re.Code >= 500)
+                    logger.LogError(ex, "Application operation failed with status {StatusCode}", (int)re.Code);
+                else
+                    logger.LogWarning("Request rejected with status {StatusCode}", (int)re.Code);
                 errors = re.Errors;
                 context.Response.StatusCode = (int)re.Code;
                 break;
             case Exception e:
-                logger.LogError(ex, "SERVER ERROR");
-                errors = string.IsNullOrWhiteSpace(e.Message) ? "Error" : e.Message;
+                logger.LogError(ex, "Unhandled request exception");
+                errors = "An unexpected error occurred";
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 break;
         }
