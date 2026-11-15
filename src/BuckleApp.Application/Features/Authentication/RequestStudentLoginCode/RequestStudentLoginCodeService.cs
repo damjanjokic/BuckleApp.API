@@ -54,10 +54,11 @@ public class RequestStudentLoginCodeService : IRequestStudentLoginCodeService
                 if (!await _emailService.Send("BuckleApp login code", $"Your login code is {code}. It expires in {_options.LoginCodeLifetimeMinutes} minutes.", current!.Email!))
                     entry.ConsumedAt = now;
             }
-            catch
+            catch (Exception ex)
             {
                 entry.ConsumedAt = now;
-                _logger.LogWarning("Student login email delivery failed.");
+                // Provider exceptions may include message contents; record only their type.
+                _logger.LogWarning("Student login email delivery failed with {ExceptionType}", ex.GetType().Name);
             }
             return true;
         });

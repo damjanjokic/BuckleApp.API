@@ -5,6 +5,7 @@ using BuckleApp.Infrastructure.Email;
 using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureLogging();
 builder.ConfigureRateLimiter();
 
 builder.Services.AddControllers();
@@ -50,14 +51,14 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        // Log or handle exceptions
-        Console.WriteLine($"Error occurred seeding roles: {ex.Message}");
+        app.Logger.LogError(ex, "Failed to initialize Identity roles");
     }
 
     // var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
     // dbContext.Database.Migrate();
 }
 
+app.UseRequestLogging();
 app.UseCors("AllowSpecificOrigins");
 app.UseMiddleware<ErrorHandlingMiddleware>();
 // Configure the HTTP request pipeline.

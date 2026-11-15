@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using BuckleApp.Infrastructure.Interfaces;
 using Microsoft.Extensions.Options;
 using Resend;
@@ -9,10 +10,12 @@ namespace BuckleApp.Infrastructure.Email;
 public class EmailService : IEmailService
 {
     private readonly SmtpConfig _config;
+    private readonly ILogger<EmailService> _logger;
 
-    public EmailService(IOptions<SmtpConfig> config)
+    public EmailService(IOptions<SmtpConfig> config, ILogger<EmailService> logger)
     {
         _config = config.Value;
+        _logger = logger;
     }
     
     // public async Task<bool> Send(string mailSubject, string mailBodyText, string mailTo)
@@ -39,7 +42,10 @@ public class EmailService : IEmailService
             Subject = mailSubject,
             HtmlBody = mailBodyText
         } );
-        Console.WriteLine( "Email Id={0}", resp.Content );
+        if (resp.Success)
+            _logger.LogDebug("Email provider accepted delivery");
+        else
+            _logger.LogWarning("Email provider rejected delivery");
 
         return resp.Success;
 
